@@ -1,0 +1,117 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.4.11605.240
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AriaAPI", "AriaAPI\AriaAPI.csproj", "{561C9209-9FD1-4A4D-9B64-FE381C2D0E64}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AriaAPI.Tests", "AriaAPI.Tests\AriaAPI.Tests.csproj", "{7E8D113C-390E-4AAF-B636-E9928BBE4BF6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{F7A59145-A10E-4670-8219-8AF464D03D9E}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+		.pre-commit-config.yaml = .pre-commit-config.yaml
+		.secrets.baseline = .secrets.baseline
+		CHANGELOG.md = CHANGELOG.md
+		CLAUDE.md = CLAUDE.md
+		CONTRIBUTING.md = CONTRIBUTING.md
+		LICENSE.txt = LICENSE.txt
+		nuget.config = nuget.config
+		README.md = README.md
+		README.NuGet.md = README.NuGet.md
+		SECURITY.md = SECURITY.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{4EF0A14E-BA14-422F-93C4-397C8B5390E5}"
+	ProjectSection(SolutionItems) = preProject
+		.github\dependabot.yml = .github\dependabot.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{79AA71AF-0A02-473A-A7B2-3F1BF3811E7A}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\publish.yml = .github\workflows\publish.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{58A533AF-7452-488C-9429-0D321A2B4A43}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "code-reviews", "code-reviews", "{B319CBE9-F37C-47BC-B516-47615FAC94B0}"
+	ProjectSection(SolutionItems) = preProject
+		docs\code-reviews\2026-03-12-full-repository-review.md = docs\code-reviews\2026-03-12-full-repository-review.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "plans", "plans", "{EC12331C-5892-4F28-B433-DE31A0B63671}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "archive", "archive", "{F31F8B30-4F1C-4D6C-A995-DBB57917AAB3}"
+	ProjectSection(SolutionItems) = preProject
+		docs\plans\archive\2026-03-14-aria-api-improvements-plan.md = docs\plans\archive\2026-03-14-aria-api-improvements-plan.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "superpowers", "superpowers", "{986299BF-24AF-405B-B365-3FACC73E97A6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "superpowers-plans", "superpowers-plans", "{614CC9CB-7071-4419-97B7-F397CBFE8E90}"
+	ProjectSection(SolutionItems) = preProject
+		docs\superpowers\plans\2026-03-14-fill-coverage-gaps.md = docs\superpowers\plans\2026-03-14-fill-coverage-gaps.md
+		docs\superpowers\plans\2026-03-15-new-fhir-capabilities.md = docs\superpowers\plans\2026-03-15-new-fhir-capabilities.md
+		docs\superpowers\plans\2026-03-15-nuget-github-packages.md = docs\superpowers\plans\2026-03-15-nuget-github-packages.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "specs", "specs", "{7CB790E3-0902-4F90-9AD5-7DEC7784A6B4}"
+	ProjectSection(SolutionItems) = preProject
+		docs\superpowers\specs\2026-03-14-aria-api-improvements-design.md = docs\superpowers\specs\2026-03-14-aria-api-improvements-design.md
+		docs\superpowers\specs\2026-03-15-new-fhir-capabilities-design.md = docs\superpowers\specs\2026-03-15-new-fhir-capabilities-design.md
+		docs\superpowers\specs\2026-03-15-nuget-github-packages-design.md = docs\superpowers\specs\2026-03-15-nuget-github-packages-design.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{561C9209-9FD1-4A4D-9B64-FE381C2D0E64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{561C9209-9FD1-4A4D-9B64-FE381C2D0E64}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{561C9209-9FD1-4A4D-9B64-FE381C2D0E64}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{561C9209-9FD1-4A4D-9B64-FE381C2D0E64}.Debug|x64.Build.0 = Debug|Any CPU
+		{561C9209-9FD1-4A4D-9B64-FE381C2D0E64}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{561C9209-9FD1-4A4D-9B64-FE381C2D0E64}.Debug|x86.Build.0 = Debug|Any CPU
+		{561C9209-9FD1-4A4D-9B64-FE381C2D0E64}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{561C9209-9FD1-4A4D-9B64-FE381C2D0E64}.Release|Any CPU.Build.0 = Release|Any CPU
+		{561C9209-9FD1-4A4D-9B64-FE381C2D0E64}.Release|x64.ActiveCfg = Release|Any CPU
+		{561C9209-9FD1-4A4D-9B64-FE381C2D0E64}.Release|x64.Build.0 = Release|Any CPU
+		{561C9209-9FD1-4A4D-9B64-FE381C2D0E64}.Release|x86.ActiveCfg = Release|Any CPU
+		{561C9209-9FD1-4A4D-9B64-FE381C2D0E64}.Release|x86.Build.0 = Release|Any CPU
+		{7E8D113C-390E-4AAF-B636-E9928BBE4BF6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E8D113C-390E-4AAF-B636-E9928BBE4BF6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E8D113C-390E-4AAF-B636-E9928BBE4BF6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7E8D113C-390E-4AAF-B636-E9928BBE4BF6}.Debug|x64.Build.0 = Debug|Any CPU
+		{7E8D113C-390E-4AAF-B636-E9928BBE4BF6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7E8D113C-390E-4AAF-B636-E9928BBE4BF6}.Debug|x86.Build.0 = Debug|Any CPU
+		{7E8D113C-390E-4AAF-B636-E9928BBE4BF6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E8D113C-390E-4AAF-B636-E9928BBE4BF6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E8D113C-390E-4AAF-B636-E9928BBE4BF6}.Release|x64.ActiveCfg = Release|Any CPU
+		{7E8D113C-390E-4AAF-B636-E9928BBE4BF6}.Release|x64.Build.0 = Release|Any CPU
+		{7E8D113C-390E-4AAF-B636-E9928BBE4BF6}.Release|x86.ActiveCfg = Release|Any CPU
+		{7E8D113C-390E-4AAF-B636-E9928BBE4BF6}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{79AA71AF-0A02-473A-A7B2-3F1BF3811E7A} = {4EF0A14E-BA14-422F-93C4-397C8B5390E5}
+		{B319CBE9-F37C-47BC-B516-47615FAC94B0} = {58A533AF-7452-488C-9429-0D321A2B4A43}
+		{EC12331C-5892-4F28-B433-DE31A0B63671} = {58A533AF-7452-488C-9429-0D321A2B4A43}
+		{F31F8B30-4F1C-4D6C-A995-DBB57917AAB3} = {EC12331C-5892-4F28-B433-DE31A0B63671}
+		{986299BF-24AF-405B-B365-3FACC73E97A6} = {58A533AF-7452-488C-9429-0D321A2B4A43}
+		{614CC9CB-7071-4419-97B7-F397CBFE8E90} = {986299BF-24AF-405B-B365-3FACC73E97A6}
+		{7CB790E3-0902-4F90-9AD5-7DEC7784A6B4} = {986299BF-24AF-405B-B365-3FACC73E97A6}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5244F3AC-8D62-48CC-8B45-1B1710135C0D}
+	EndGlobalSection
+EndGlobal

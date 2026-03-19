@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>f39d63b7-efd2-4b51-a980-129f9f4365b8</UserSecretsId>
+    <Platforms>AnyCPU;x64</Platforms>
+	<GenerateReferenceAssembly>true</GenerateReferenceAssembly>
+	<GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <Version>1.0.0-beta.1</Version>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>AriaAPI</PackageId>
+    <Authors>Dominic DiCostanzo</Authors>
+    <Company>Dominic DiCostanzo</Company>
+    <Description>C# SDK for the Varian Aria oncology information system via FHIR R4 API. Provides search, creation, and OAuth2 token management for 37 FHIR resource types.</Description>
+    <PackageTags>fhir;hl7;oncology;varian;aria;healthcare;r4</PackageTags>
+    <PackageProjectUrl>https://github.com/ddicostanzo/AriaAPI</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ddicostanzo/AriaAPI.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>AGPL-3.0-only</PackageLicenseExpression>
+    <PackageReadmeFile Condition="Exists('../README.NuGet.md')">README.NuGet.md</PackageReadmeFile>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>AriaAPI.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hl7.Fhir.R4" Version="6.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.1" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../LICENSE.txt" Pack="true" PackagePath="/" />
+    <None Include="../README.NuGet.md" Pack="true" PackagePath="/" Condition="Exists('../README.NuGet.md')" />
+  </ItemGroup>
+
+</Project>
