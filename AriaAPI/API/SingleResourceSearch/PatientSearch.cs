@@ -242,7 +242,7 @@ namespace AriaAPI.API.SingleResourceSearch
                     }
                 }
                 if (identifierValues.Count > 0)
-                    fanOuts.Add(new FanOutSearchHelper.FanOutParam("identifier", identifierValues));
+                    fanOuts.Add(new FanOutSearchHelper.FanOutParam("identifier", identifierValues, PreserveCommas: true));
             }
 
             return await SearchExecutor.ExecuteAsync(
