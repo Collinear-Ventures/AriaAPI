@@ -1,4 +1,4 @@
-name: Publish NuGet Package
+name: On Tag Publish NuGet Package
 
 on:
   push:
