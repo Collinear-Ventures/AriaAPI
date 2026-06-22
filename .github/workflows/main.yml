@@ -38,7 +38,7 @@ jobs:
       - name: Restore dependencies
         shell: pwsh
         run: |
-          dotnet restore "<PATH_TO_AriaAPI.csproj>"
+          dotnet restore "./AriaAPI/AriaAPI.csproj"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Pack
@@ -47,7 +47,7 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
         run: |
           $VERSION = "$env:REF_NAME" -replace '^v', ''
-          dotnet pack "<PATH_TO_AriaAPI.csproj>" -c Release --no-restore -p:Version="$VERSION" -p:UseSharedCompilation=false -o ./nupkg
+          dotnet pack "./AriaAPI/AriaAPI.csproj" -c Release --no-restore -p:Version="$VERSION" -p:UseSharedCompilation=false -o ./nupkg
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Publish to GitHub Packages
