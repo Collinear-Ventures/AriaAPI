@@ -1,0 +1,63 @@
+name: Publish NuGet Package
+
+# Add this file to the Collinear-Ventures/AriaAPI repo at:
+#   .github/workflows/publish.yml
+#
+# It packs the AriaAPI library and pushes a .nupkg to the org's GitHub Packages
+# feed on every `v*` tag. This is what makes the package available to consumers
+# (e.g. OSUAriaAPIInfrastructure) that reference it via NuGet. Tagging a GitHub
+# Release alone does NOT publish a package.
+#
+# BEFORE USING:
+#  1. Replace <PATH_TO_AriaAPI.csproj> below with the actual library project path.
+#  2. Confirm that .csproj has package metadata, especially <PackageId>AriaAPI</PackageId>.
+#  3. The package id + tag version determine the published version
+#     (tag `v1.0.4` -> package version `1.0.4`).
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      packages: write   # required to push to GitHub Packages
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        shell: pwsh
+        run: |
+          dotnet restore "<PATH_TO_AriaAPI.csproj>"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Pack
+        shell: pwsh
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          $VERSION = "$env:REF_NAME" -replace '^v', ''
+          dotnet pack "<PATH_TO_AriaAPI.csproj>" -c Release --no-restore -p:Version="$VERSION" -p:UseSharedCompilation=false -o ./nupkg
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Publish to GitHub Packages
+        shell: pwsh
+        run: |
+          $pkgs = Get-ChildItem -Path ./nupkg -Filter *.nupkg
+          foreach ($pkg in $pkgs) {
+            dotnet nuget push $pkg.FullName `
+              --source "https://nuget.pkg.github.com/Collinear-Ventures/index.json" `
+              --api-key ${{ secrets.GITHUB_TOKEN }} `
+              --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
