@@ -183,7 +183,15 @@ namespace AriaAPI.API.DocumentReferenceCreate
 
         /// <summary>Default max file size = 10 MB.</summary>
         public const long DefaultMaxFileSizeBytes = 10485760L;
-        
+
+        /// <summary>
+        /// Cached, pretty-printing FHIR serializer options for verification logging.
+        /// Building the FHIR converter stack is non-trivial, so the options are created once and
+        /// reused; <see cref="JsonSerializerOptions"/> is thread-safe after first use.
+        /// </summary>
+        private static readonly JsonSerializerOptions _verificationJsonOptions =
+            new JsonSerializerOptions { WriteIndented = true }.ForFhir(ModelInfo.ModelInspector);
+
 
         /// <summary>
         /// Creates a DocumentReference from a file.
@@ -216,6 +224,12 @@ namespace AriaAPI.API.DocumentReferenceCreate
 
             if (!p.Type.HasValue)
                 throw new ArgumentException("Document Type is required.", nameof(p));
+
+            // AuthenticatorReference is optional, but when supplied it must be a well-formed
+            // "ResourceType/Id" reference so a malformed value never reaches the server.
+            EnsureValidReferenceFormat(
+                p.AuthenticatorReference,
+                nameof(DocumentReferenceCreateParams.AuthenticatorReference));
 
             string resolverRef = GetResolverOrganizationReference(p);
             string resolverId = ExtractId(resolverRef);
@@ -276,9 +290,21 @@ namespace AriaAPI.API.DocumentReferenceCreate
 
             if (p.LogResourceJson && logger.IsEnabled(LogLevel.Debug) && created != null)
             {
-                logger.LogDebug(
-                    "DocumentReference JSON for verification: {Json}",
-                    SerializeForVerification(created, p.IncludeAttachmentDataInJsonLog));
+                // Best-effort verification logging: a serialization failure must never fail an
+                // already-persisted create (which would invite a duplicate-creating retry).
+                try
+                {
+                    logger.LogDebug(
+                        "DocumentReference JSON for verification: {Json}",
+                        SerializeForVerification(created, p.IncludeAttachmentDataInJsonLog));
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(
+                        ex,
+                        "Failed to serialize DocumentReference {Id} for verification logging.",
+                        PhiMask.Mask(created.Id ?? ""));
+                }
             }
 
             logger.LogInformation("Created DocumentReference {Id}", PhiMask.Mask(created?.Id ?? ""));
@@ -461,9 +487,7 @@ namespace AriaAPI.API.DocumentReferenceCreate
                 }
             }
 
-            var options = new JsonSerializerOptions().ForFhir(ModelInfo.ModelInspector);
-            options.WriteIndented = true;
-            return JsonSerializer.Serialize(target, options);
+            return JsonSerializer.Serialize(target, _verificationJsonOptions);
         }
 
         private static ResourceReference CreateRef(string reference, string? display = null)
@@ -472,6 +496,22 @@ namespace AriaAPI.API.DocumentReferenceCreate
             if (!string.IsNullOrWhiteSpace(display))
                 r.Display = display;
             return r;
+        }
+
+        /// <summary>
+        /// Validates that an optional FHIR reference, when provided, is in "ResourceType/Id" form.
+        /// No-op when the reference is null or whitespace (the reference is optional).
+        /// </summary>
+        private static void EnsureValidReferenceFormat(string? reference, string referenceName)
+        {
+            if (string.IsNullOrWhiteSpace(reference))
+                return;
+
+            var parts = reference.Split('/');
+            if (parts.Length < 2 || string.IsNullOrWhiteSpace(parts[1]))
+                throw new ArgumentException(
+                    $"{referenceName} must be in 'ResourceType/Id' format, got: \"{reference}\".",
+                    "p");
         }
 
         private static string ExtractId(string reference)

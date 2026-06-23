@@ -104,8 +104,10 @@ namespace AriaAPI.Tests.Create
         }
 
         [Fact]
-        public async Task CreateFromFileAsync_MissingAuthenticatorReference_ThrowsArgumentException()
+        public async Task CreateFromFileAsync_AuthenticatorReferenceWithoutSlash_ThrowsArgumentException()
         {
+            // Type is set and the file exists so the guard under test (authenticator format)
+            // is the one that fires, not the file/type guards that precede it.
             var configurator = UninitializedConfigurator();
             var tmpFile = Path.GetTempFileName();
             try
@@ -115,11 +117,13 @@ namespace AriaAPI.Tests.Create
                 var p = new DocumentReferenceCreate.DocumentReferenceCreateParams
                 {
                     SourceFilePath = tmpFile,
-                    AuthenticatorReference = string.Empty
+                    Type = AriaAPI.API.SearchHelpers.SearchTypes.DocumentType.AdvanceDirective,
+                    AuthenticatorReference = "NoSlashHere"
                 };
 
-                await Assert.ThrowsAsync<ArgumentException>(() =>
+                var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
                     DocumentReferenceCreate.CreateFromFileAsync(configurator, p, Logger));
+                Assert.Contains("AuthenticatorReference", ex.Message);
             }
             finally
             {
@@ -128,7 +132,7 @@ namespace AriaAPI.Tests.Create
         }
 
         [Fact]
-        public async Task CreateFromFileAsync_MalformedAuthenticatorReference_ThrowsArgumentException()
+        public async Task CreateFromFileAsync_AuthenticatorReferenceWithEmptyId_ThrowsArgumentException()
         {
             var configurator = UninitializedConfigurator();
             var tmpFile = Path.GetTempFileName();
@@ -139,11 +143,13 @@ namespace AriaAPI.Tests.Create
                 var p = new DocumentReferenceCreate.DocumentReferenceCreateParams
                 {
                     SourceFilePath = tmpFile,
-                    AuthenticatorReference = "NoSlashHere"
+                    Type = AriaAPI.API.SearchHelpers.SearchTypes.DocumentType.AdvanceDirective,
+                    AuthenticatorReference = "Practitioner/"
                 };
 
-                await Assert.ThrowsAsync<ArgumentException>(() =>
+                var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
                     DocumentReferenceCreate.CreateFromFileAsync(configurator, p, Logger));
+                Assert.Contains("AuthenticatorReference", ex.Message);
             }
             finally
             {
