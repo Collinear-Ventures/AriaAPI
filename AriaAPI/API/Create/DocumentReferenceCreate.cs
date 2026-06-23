@@ -113,10 +113,49 @@ namespace AriaAPI.API.DocumentReferenceCreate
 
             /// <summary>Document storage location (Varian extension).</summary>
             public string? DocumentLocation { get; init; }
+
+
+            /// <summary>
+            /// Enables Varian supervisor extension.
+            /// Default false so package consumers can opt in after validation.
+            /// </summary>
+            public bool IncludeSupervisorExtension { get; init; } = false;
+
+            /// <summary>
+            /// Enables Varian authenticated timestamp extension.
+            /// Default false so package consumers can opt in after validation.
+            /// </summary>
+            public bool IncludeAuthenticatedDateExtension { get; init; } = false;
+
+            /// <summary>
+            /// Enables Varian template name extension.
+            /// Default false so package consumers can opt in after validation.
+            /// </summary>
+            public bool IncludeTemplateNameExtension { get; init; } = false;
+
+            /// <summary>
+            /// Enables Varian login institution extension.
+            /// Default false so package consumers can opt in after validation.
+            /// </summary>
+            public bool IncludeInstitutionExtension { get; init; } = false;
+
+            /// <summary>
+            /// Enables Varian document location extension.
+            /// Default false so package consumers can opt in after validation.
+            /// </summary>
+            public bool IncludeDocumentLocationExtension { get; init; } = false;
+
+            /// <summary>
+            /// Convenience flag to enable all currently supported Varian extensions.
+            /// Individual flags are still checked with their corresponding values.
+            /// </summary>
+            public bool IncludeAllVarianExtensions { get; init; } = false;
+
         }
 
         /// <summary>Default max file size = 10 MB.</summary>
         public const long DefaultMaxFileSizeBytes = 10485760L;
+        
 
         /// <summary>
         /// Creates a DocumentReference from a file.
@@ -153,13 +192,17 @@ namespace AriaAPI.API.DocumentReferenceCreate
 
             ct.ThrowIfCancellationRequested();
 
-            string resolverRef = GetResolver(p);
+            string resolverRef = GetResolverOrganizationReference(p);
             string resolverId = ExtractId(resolverRef);
 
-            var ccType = (await DocumentTypeConceptService
-                    .CreateAsync(configurator, resolverId)
-                    .ConfigureAwait(false))
-                .Resolve(p.Type.Value);
+
+            var service = await DocumentTypeConceptService.CreateAsync(
+                    configurator,
+                    publisher: resolverId,
+                    listReturnLimit: 250
+                ).ConfigureAwait(false);
+
+            var ccType = service.Resolve(p.Type.Value);
 
             byte[] bytes = await File.ReadAllBytesAsync(path, ct);
             string contentType = CreateHelpers.ContentTypeHelper.MapFromExtension(Path.GetExtension(path));
@@ -193,7 +236,9 @@ namespace AriaAPI.API.DocumentReferenceCreate
             AddRef(() => doc.Custodian = CreateRef(p.CustodianReference ?? throw new ArgumentNullException(nameof(p.CustodianReference)), p.CustodianDisplay), p.CustodianReference);
 
             AddIdentifiers(doc, p, bytes);
-            AddExtensions(doc, p);
+
+            if(p.IncludeVarianExtensions)
+                AddExtensions(doc, p);
 
             var created = await configurator
                 .ForResource<DocumentReference>(ct)
@@ -240,30 +285,60 @@ namespace AriaAPI.API.DocumentReferenceCreate
             doc.Identifier.Add(new Identifier("urn:hash:sha256", CreateHelpers.HashHelper.Sha256Hex(bytes)));
         }
 
-        /// <summary>Add Varian extensions.</summary>
+        /// <summary>Add Varian extensions when individually enabled.</summary>
         private static void AddExtensions(DocumentReference doc, DocumentReferenceCreateParams p)
         {
             var ext = new List<Extension>();
 
-            if (!string.IsNullOrWhiteSpace(p.SupervisorReference))
-                ext.Add(new Extension("http://varian.com/fhir/v1/StructureDefinition/documentreference-supervisor",
+            bool includeSupervisor =
+                p.IncludeAllVarianExtensions || p.IncludeSupervisorExtension;
+
+            bool includeAuthenticatedDate =
+                p.IncludeAllVarianExtensions || p.IncludeAuthenticatedDateExtension;
+
+            bool includeTemplateName =
+                p.IncludeAllVarianExtensions || p.IncludeTemplateNameExtension;
+
+            bool includeInstitution =
+                p.IncludeAllVarianExtensions || p.IncludeInstitutionExtension;
+
+            bool includeDocumentLocation =
+                p.IncludeAllVarianExtensions || p.IncludeDocumentLocationExtension;
+
+            if (includeSupervisor && !string.IsNullOrWhiteSpace(p.SupervisorReference))
+            {
+                ext.Add(new Extension(
+                    "http://varian.com/fhir/v1/StructureDefinition/documentreference-supervisor",
                     CreateRef(p.SupervisorReference, p.SupervisorDisplay)));
+            }
 
-            if (p.AuthenticatedDate.HasValue)
-                ext.Add(new Extension("http://varian.com/fhir/v1/StructureDefinition/documentreference-authenticated",
+            if (includeAuthenticatedDate && p.AuthenticatedDate.HasValue)
+            {
+                ext.Add(new Extension(
+                    "http://varian.com/fhir/v1/StructureDefinition/documentreference-authenticated",
                     new FhirDateTime(p.AuthenticatedDate.Value)));
+            }
 
-            if (!string.IsNullOrWhiteSpace(p.TemplateName))
-                ext.Add(new Extension("http://varian.com/fhir/v1/StructureDefinition/documentreference-templateName",
+            if (includeTemplateName && !string.IsNullOrWhiteSpace(p.TemplateName))
+            {
+                ext.Add(new Extension(
+                    "http://varian.com/fhir/v1/StructureDefinition/documentreference-templateName",
                     new FhirString(p.TemplateName)));
+            }
 
-            if (!string.IsNullOrWhiteSpace(p.InstitutionReference))
-                ext.Add(new Extension("http://varian.com/fhir/v1/StructureDefinition/login-institution",
+            if (includeInstitution && !string.IsNullOrWhiteSpace(p.InstitutionReference))
+            {
+                ext.Add(new Extension(
+                    "http://varian.com/fhir/v1/StructureDefinition/login-institution",
                     CreateRef(p.InstitutionReference, p.InstitutionDisplay)));
+            }
 
-            if (!string.IsNullOrWhiteSpace(p.DocumentLocation))
-                ext.Add(new Extension("http://varian.com/fhir/v1/StructureDefinition/documentreference-documentLocation",
+            if (includeDocumentLocation && !string.IsNullOrWhiteSpace(p.DocumentLocation))
+            {
+                ext.Add(new Extension(
+                    "http://varian.com/fhir/v1/StructureDefinition/documentreference-documentLocation",
                     new FhirString(p.DocumentLocation)));
+            }
 
             if (ext.Count > 0)
                 doc.Extension = ext;
@@ -282,13 +357,6 @@ namespace AriaAPI.API.DocumentReferenceCreate
             if (!string.IsNullOrWhiteSpace(value))
                 setter();
         }
-
-        private static string GetResolver(DocumentReferenceCreateParams p) =>
-            p.DocumentTypeResolverOrganizationReference ??
-            p.InstitutionReference ??
-            p.CustodianReference ??
-            p.AuthenticatorReference ??
-            throw new ArgumentException("No resolver reference provided");
 
         private static string ExtractId(string reference)
         {
@@ -314,5 +382,26 @@ namespace AriaAPI.API.DocumentReferenceCreate
                 "amended" => CompositionStatus.Amended,
                 _ => CompositionStatus.Final
             };
+
+
+        private static string GetResolverOrganizationReference(DocumentReferenceCreateParams p)
+        {
+            var resolverRef =
+                p.DocumentTypeResolverOrganizationReference ??
+                p.CustodianReference ??
+                p.InstitutionReference;
+
+            if (string.IsNullOrWhiteSpace(resolverRef))
+                throw new ArgumentException(
+                    "DocumentTypeResolverOrganizationReference, CustodianReference, or InstitutionReference is required for document type resolution.",
+                    nameof(p));
+
+            if (!resolverRef.StartsWith("Organization/", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException(
+                    $"Document type resolver must be an Organization reference, got: {resolverRef}",
+                    nameof(p));
+
+            return resolverRef;
+        }
     }
 }
