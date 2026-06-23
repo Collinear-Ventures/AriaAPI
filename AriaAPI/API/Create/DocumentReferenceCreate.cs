@@ -137,7 +137,7 @@ namespace AriaAPI.API.DocumentReferenceCreate
             /// Enables Varian login institution extension.
             /// Default false so package consumers can opt in after validation.
             /// </summary>
-            public bool IncludeInstitutionExtension { get; init; } = false;
+            public bool IncludeLoginInstitutionExtension { get; init; } = false;
 
             /// <summary>
             /// Enables Varian document location extension.
@@ -237,8 +237,7 @@ namespace AriaAPI.API.DocumentReferenceCreate
 
             AddIdentifiers(doc, p, bytes);
 
-            if(p.IncludeVarianExtensions)
-                AddExtensions(doc, p);
+            AddExtensions(doc, p);
 
             var created = await configurator
                 .ForResource<DocumentReference>(ct)
@@ -300,41 +299,66 @@ namespace AriaAPI.API.DocumentReferenceCreate
                 p.IncludeAllVarianExtensions || p.IncludeTemplateNameExtension;
 
             bool includeInstitution =
-                p.IncludeAllVarianExtensions || p.IncludeInstitutionExtension;
+                p.IncludeAllVarianExtensions || p.IncludeLoginInstitutionExtension;
 
             bool includeDocumentLocation =
                 p.IncludeAllVarianExtensions || p.IncludeDocumentLocationExtension;
 
-            if (includeSupervisor && !string.IsNullOrWhiteSpace(p.SupervisorReference))
+            if (includeSupervisor)
             {
+                if (string.IsNullOrWhiteSpace(p.SupervisorReference))
+                    throw new ArgumentException(
+                        "IncludeSupervisorExtension is true, but SupervisorReference was not provided.",
+                        nameof(p));
+
                 ext.Add(new Extension(
                     "http://varian.com/fhir/v1/StructureDefinition/documentreference-supervisor",
                     CreateRef(p.SupervisorReference, p.SupervisorDisplay)));
             }
 
-            if (includeAuthenticatedDate && p.AuthenticatedDate.HasValue)
+            if (includeAuthenticatedDate)
             {
+                if (!p.AuthenticatedDate.HasValue)
+                    throw new ArgumentException(
+                        "IncludeAuthenticatedDateExtension is true, but AuthenticatedDate was not provided.",
+                        nameof(p));
+
                 ext.Add(new Extension(
                     "http://varian.com/fhir/v1/StructureDefinition/documentreference-authenticated",
                     new FhirDateTime(p.AuthenticatedDate.Value)));
             }
 
-            if (includeTemplateName && !string.IsNullOrWhiteSpace(p.TemplateName))
+            if (includeTemplateName)
             {
+                if (string.IsNullOrWhiteSpace(p.TemplateName))
+                    throw new ArgumentException(
+                        "IncludeTemplateNameExtension is true, but TemplateName was not provided.",
+                        nameof(p));
+
                 ext.Add(new Extension(
                     "http://varian.com/fhir/v1/StructureDefinition/documentreference-templateName",
                     new FhirString(p.TemplateName)));
             }
 
-            if (includeInstitution && !string.IsNullOrWhiteSpace(p.InstitutionReference))
+            if (includeInstitution)
             {
+                if (string.IsNullOrWhiteSpace(p.InstitutionReference))
+                    throw new ArgumentException(
+                        "IncludeInstitutionExtension is true, but InstitutionReference was not provided.",
+                        nameof(p));
+
                 ext.Add(new Extension(
                     "http://varian.com/fhir/v1/StructureDefinition/login-institution",
                     CreateRef(p.InstitutionReference, p.InstitutionDisplay)));
             }
 
-            if (includeDocumentLocation && !string.IsNullOrWhiteSpace(p.DocumentLocation))
+            if (includeDocumentLocation)
             {
+                if (string.IsNullOrWhiteSpace(p.DocumentLocation))
+                    throw new ArgumentException(
+                        "IncludeDocumentLocationExtension is true, but DocumentLocation was not provided.",
+                        nameof(p));
+
                 ext.Add(new Extension(
                     "http://varian.com/fhir/v1/StructureDefinition/documentreference-documentLocation",
                     new FhirString(p.DocumentLocation)));
