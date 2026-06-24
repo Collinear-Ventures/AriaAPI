@@ -2,11 +2,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AriaAPI.API.IdentityResolvers;
 using AriaAPI.Core;
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Serialization;
 using Microsoft.Extensions.Logging;
 using static AriaAPI.API.Create.CreateHelpers;
 using static AriaAPI.API.SearchHelpers.SearchTypes;
@@ -25,6 +27,15 @@ namespace AriaAPI.API.DocumentReferenceCreate
         public const long DefaultMaxFileSizeBytes = 10L * 1024 * 1024;
 
         /// <summary>
+        /// Lazily-built, pretty-printing FHIR serializer options for verification logging.
+        /// Built once on first use and reused; deferring construction keeps the cost (and any
+        /// initialization failure) scoped to the opt-in logging path. <see cref="JsonSerializerOptions"/>
+        /// is thread-safe after first use.
+        /// </summary>
+        private static readonly Lazy<JsonSerializerOptions> _verificationJsonOptions =
+            new(() => new JsonSerializerOptions { WriteIndented = true }.ForFhir(ModelInfo.ModelInspector));
+
+        /// <summary>
         /// Parameters required to create a DocumentReference with an embedded Attachment.
         /// </summary>
         public sealed class DocumentReferenceCreateParams
@@ -38,6 +49,12 @@ namespace AriaAPI.API.DocumentReferenceCreate
             /// <summary>FHIR reference to the authenticator, e.g., "Organization/RadOnc-1". Optional.</summary>
             public string? AuthenticatorReference { get; init; }
 
+            /// <summary>FHIR reference to the custodian organization (DocumentReference.custodian). Optional.</summary>
+            public string? CustodianReference { get; init; }
+
+            /// <summary>Optional display for the custodian reference.</summary>
+            public string? CustodianDisplay { get; init; }
+
             /// <summary>DocumentReference.status: "current" | "entered-in-error" | "superseded". Defaults to "current".</summary>
             public string Status { get; init; } = "current";
 
@@ -49,6 +66,9 @@ namespace AriaAPI.API.DocumentReferenceCreate
 
             /// <summary>Date/time the document was created (DocumentReference.date).</summary>
             public DateTime? Date { get; init; }
+
+            /// <summary>Human-readable description (DocumentReference.description). Optional.</summary>
+            public string? Description { get; init; }
 
             /// <summary>Optional identifiers attached to DocumentReference.identifier.</summary>
             public List<string>? Identifiers { get; init; }
@@ -130,6 +150,27 @@ namespace AriaAPI.API.DocumentReferenceCreate
             /// missing are skipped rather than throwing.
             /// </summary>
             public bool IncludeAllVarianExtensions { get; init; } = false;
+
+            /// <summary>
+            /// When <see langword="true"/>, the created DocumentReference is serialized to FHIR JSON
+            /// and written to the logger at <see cref="LogLevel.Debug"/> so the resource can be
+            /// verified against the vendor's Aria tooling.
+            /// <para><b>PHI warning:</b> the serialized resource contains Protected Health Information
+            /// (references, identifiers, and — when <see cref="IncludeAttachmentDataInJsonLog"/> is
+            /// set — the full document bytes). Enable only in controlled environments and route Debug
+            /// logs to a secure sink. Defaults to <see langword="false"/>.</para>
+            /// </summary>
+            public bool LogResourceJson { get; init; } = false;
+
+            /// <summary>
+            /// Controls whether the base64 <c>Attachment.data</c> payload is included when
+            /// <see cref="LogResourceJson"/> serializes the resource. When <see langword="false"/>
+            /// (the default) the data is redacted with a size placeholder, keeping the log small while
+            /// preserving the resource structure (including Varian extensions) for verification.
+            /// <para><b>PHI warning:</b> setting this <see langword="true"/> writes the full document
+            /// contents to the log in plain text.</para>
+            /// </summary>
+            public bool IncludeAttachmentDataInJsonLog { get; init; } = false;
         }
 
         /// <summary>
@@ -215,6 +256,7 @@ namespace AriaAPI.API.DocumentReferenceCreate
                 DocStatus = ParseDocStatus(p.DocStatus),
                 DateElement = p.Date.HasValue ? new Instant(p.Date.Value) : null,
                 Type = ccType.ToFhirCodeableConcept(),
+                Description = p.Description,
                 Content = new List<DocumentReference.ContentComponent>
                 {
                     new DocumentReference.ContentComponent { Attachment = attachment }
@@ -229,6 +271,8 @@ namespace AriaAPI.API.DocumentReferenceCreate
                 docRef.Author = new List<ResourceReference> { new ResourceReference(p.AuthorReference) };
             if (!string.IsNullOrWhiteSpace(p.AuthenticatorReference))
                 docRef.Authenticator = new ResourceReference(p.AuthenticatorReference);
+            if (!string.IsNullOrWhiteSpace(p.CustodianReference))
+                docRef.Custodian = CreateRef(p.CustodianReference, p.CustodianDisplay);
 
             // 4) Identifiers (optional)
             if (p.Identifiers is { Count: > 0 })
@@ -250,6 +294,25 @@ namespace AriaAPI.API.DocumentReferenceCreate
             // 7) Create via resource client
             var docClient = configurator.ForResource<DocumentReference>(ct);
             var created = await docClient.CreateAsync(docRef).ConfigureAwait(false);
+
+            if (p.LogResourceJson && logger.IsEnabled(LogLevel.Debug) && created != null)
+            {
+                // Best-effort verification logging: a serialization failure must never fail an
+                // already-persisted create (which would invite a duplicate-creating retry).
+                try
+                {
+                    logger.LogDebug(
+                        "DocumentReference JSON for verification: {Json}",
+                        SerializeForVerification(created, p.IncludeAttachmentDataInJsonLog));
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(
+                        ex,
+                        "Failed to serialize DocumentReference {Id} for verification logging.",
+                        PhiMask.Mask(created.Id ?? ""));
+                }
+            }
 
             logger.LogInformation("DocumentReference created with id: {Id}", PhiMask.Mask(created?.Id ?? ""));
             return created!;
@@ -363,6 +426,45 @@ namespace AriaAPI.API.DocumentReferenceCreate
             if (!string.IsNullOrWhiteSpace(display))
                 r.Display = display;
             return r;
+        }
+
+        /// <summary>
+        /// Serializes a DocumentReference to FHIR JSON for out-of-band verification against Aria
+        /// tooling. When <paramref name="includeAttachmentData"/> is <see langword="false"/> the
+        /// base64 <c>Attachment.data</c> payload is redacted on a deep copy (the original is never
+        /// mutated) so the structure — including Varian extensions — can be inspected without
+        /// dumping document bytes.
+        /// </summary>
+        /// <param name="doc">The resource to serialize.</param>
+        /// <param name="includeAttachmentData">Whether to retain the base64 attachment data.</param>
+        /// <returns>Pretty-printed FHIR JSON.</returns>
+        internal static string SerializeForVerification(DocumentReference doc, bool includeAttachmentData)
+        {
+            if (doc is null)
+                throw new ArgumentNullException(nameof(doc));
+
+            var target = doc;
+
+            if (!includeAttachmentData)
+            {
+                target = (DocumentReference)doc.DeepCopy();
+
+                if (target.Content != null)
+                {
+                    foreach (var content in target.Content)
+                    {
+                        if (content.Attachment?.Data is { } data)
+                        {
+                            content.Attachment.Data = null;
+                            content.Attachment.AddExtension(
+                                "urn:aria:redacted-attachment-data",
+                                new FhirString($"<redacted {data.Length} bytes>"));
+                        }
+                    }
+                }
+            }
+
+            return JsonSerializer.Serialize(target, _verificationJsonOptions.Value);
         }
 
         private static DocumentReferenceStatus ParseDocRefStatus(string? s)

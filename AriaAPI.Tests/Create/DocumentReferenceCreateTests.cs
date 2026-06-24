@@ -236,5 +236,63 @@ namespace AriaAPI.Tests.Create
 
             Assert.Empty(DocumentReferenceCreate.BuildVarianExtensions(p));
         }
+
+        // ── SerializeForVerification (LogResourceJson) ─────────────────────────
+
+        [Fact]
+        public void SerializeForVerification_RedactsAttachmentDataByDefault()
+        {
+            var doc = new DocumentReference
+            {
+                Content = new System.Collections.Generic.List<DocumentReference.ContentComponent>
+                {
+                    new DocumentReference.ContentComponent
+                    {
+                        Attachment = new Attachment
+                        {
+                            Data = new byte[] { 1, 2, 3, 4 },
+                            ContentType = "application/pdf"
+                        }
+                    }
+                },
+                Extension = new System.Collections.Generic.List<Extension>
+                {
+                    new Extension(SupervisorExtensionUrl, new ResourceReference("Practitioner/123"))
+                }
+            };
+
+            var json = DocumentReferenceCreate.SerializeForVerification(doc, includeAttachmentData: false);
+
+            Assert.Contains("urn:aria:redacted-attachment-data", json);
+            Assert.DoesNotContain("\"data\"", json);
+            // The structure under verification (supervisor extension) is preserved.
+            Assert.Contains("documentreference-supervisor", json);
+            // The original resource is never mutated.
+            Assert.NotNull(doc.Content[0].Attachment.Data);
+        }
+
+        [Fact]
+        public void SerializeForVerification_IncludesAttachmentDataWhenRequested()
+        {
+            var doc = new DocumentReference
+            {
+                Content = new System.Collections.Generic.List<DocumentReference.ContentComponent>
+                {
+                    new DocumentReference.ContentComponent
+                    {
+                        Attachment = new Attachment
+                        {
+                            Data = new byte[] { 1, 2, 3, 4 },
+                            ContentType = "application/pdf"
+                        }
+                    }
+                }
+            };
+
+            var json = DocumentReferenceCreate.SerializeForVerification(doc, includeAttachmentData: true);
+
+            Assert.Contains("\"data\"", json);
+            Assert.DoesNotContain("urn:aria:redacted-attachment-data", json);
+        }
     }
 }
