@@ -4,7 +4,7 @@
 
 # AriaAPI
 
-**Version:** `1.0.1`
+**Version:** `1.0.10`
 
 A .NET 10 class library providing a C# SDK for interacting with the Varian Aria oncology information system via its FHIR R4 API.
 
