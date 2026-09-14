@@ -94,6 +94,32 @@ namespace AriaAPI.Security
         }
 
         /// <summary>
+        /// Evicts the cached token for the active system and the given scope (or the active
+        /// system's configured scope if <paramref name="scopeOverride"/> is null or empty),
+        /// forcing the next <see cref="GetTokenAsync"/> call to acquire a fresh token from the
+        /// OAuth2 token endpoint instead of returning a cached (possibly rejected) one.
+        /// </summary>
+        /// <param name="scopeOverride">
+        /// The scope whose cached token should be invalidated. Must match the scope used to
+        /// acquire the token being invalidated.
+        /// </param>
+        public void InvalidateToken(string? scopeOverride = null)
+        {
+            var system = _factory.GetActiveSystem(out var systemName);
+
+            var scope = string.IsNullOrWhiteSpace(scopeOverride)
+                ? system.Auth.Scope
+                : scopeOverride;
+
+            if (scope is null)
+                return;
+
+            var scopeNormalized = NormalizeScope(scope);
+            var cacheKey = $"token:{systemName}:{scopeNormalized}";
+            _cache.Remove(cacheKey);
+        }
+
+        /// <summary>
         /// Normalizes scope inputs allowing comma or space lists -> single space-delimited string.
         /// </summary>
         private static string NormalizeScope(string scope) =>

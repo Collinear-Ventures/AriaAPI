@@ -125,12 +125,20 @@ namespace AriaAPI.Core
             }
 
             /// <summary>
-            /// Forces the next request to acquire a fresh token by clearing the cached token and expiry.
+            /// Forces the next request to acquire a fresh token by clearing the locally cached
+            /// token/expiry and evicting the corresponding entry from <see cref="TokenProvider"/>'s
+            /// cache, so the next acquisition reaches the OAuth2 token endpoint instead of
+            /// replaying the same (rejected) cached token.
             /// </summary>
             private async Task ForceRefreshAsync()
             {
                 await _tokenLock.WaitAsync().ConfigureAwait(false);
-                try { _expiresAtUtc = DateTimeOffset.MinValue; _accessToken = null; }
+                try
+                {
+                    _expiresAtUtc = DateTimeOffset.MinValue;
+                    _accessToken = null;
+                    _tokenProvider.InvalidateToken(_scope);
+                }
                 finally { _tokenLock.Release(); }
             }
 

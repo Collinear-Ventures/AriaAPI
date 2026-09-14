@@ -203,6 +203,70 @@ namespace AriaAPI.Tests.Core
         }
 
         /// <summary>
+        /// After a 401, ForceRefreshAsync must cause the retry to fetch a genuinely new token
+        /// from the OAuth endpoint (cache bypassed) rather than replaying the cached, rejected one.
+        /// </summary>
+        [Fact]
+        public async Task SendAsync_UnauthorizedResponse_ForceRefreshBypassesTokenProviderCache()
+        {
+            var attemptCount = 0;
+            var fhirHandler = new SyncFuncHandler(_ =>
+                Interlocked.Increment(ref attemptCount) == 1
+                    ? new HttpResponseMessage(HttpStatusCode.Unauthorized)
+                    : OkFhirResponse());
+
+            var tokenCallCount = 0;
+            var tokenHandler = new SyncFuncHandler(_ =>
+                OkTokenResponse($"token-{Interlocked.Increment(ref tokenCallCount)}", expiresIn: 3600));
+
+            var (_, client) = BuildBearerClient(fhirHandler, tokenHandler);
+            using (client)
+            {
+                var response = await client.GetAsync(ResourceUrl);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            }
+
+            // Without cache invalidation, tokenCallCount stays at 1 because TokenProvider's cache
+            // (TTL 3600s - 30s skew) serves the same rejected token back to the handler on retry.
+            Assert.Equal(2, tokenCallCount);
+        }
+
+        /// <summary>
+        /// The retried request's Authorization header carries the newly-acquired token,
+        /// not the rejected one from the first attempt.
+        /// </summary>
+        [Fact]
+        public async Task SendAsync_UnauthorizedResponse_RetryUsesFreshTokenValue()
+        {
+            string? firstAuth = null;
+            string? retryAuth = null;
+            var attemptCount = 0;
+            var fhirHandler = new SyncFuncHandler(req =>
+            {
+                var attempt = Interlocked.Increment(ref attemptCount);
+                if (attempt == 1)
+                {
+                    firstAuth = req.Headers.Authorization?.Parameter;
+                    return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+                }
+                retryAuth = req.Headers.Authorization?.Parameter;
+                return OkFhirResponse();
+            });
+
+            var tokenCallCount = 0;
+            var tokenHandler = new SyncFuncHandler(_ =>
+                OkTokenResponse($"token-{Interlocked.Increment(ref tokenCallCount)}", expiresIn: 3600));
+
+            var (_, client) = BuildBearerClient(fhirHandler, tokenHandler);
+            using (client)
+                await client.GetAsync(ResourceUrl);
+
+            Assert.NotNull(firstAuth);
+            Assert.NotNull(retryAuth);
+            Assert.NotEqual(firstAuth, retryAuth); // without the fix, both are "token-1"
+        }
+
+        /// <summary>
         /// A POST request with body content can be retried on 401 without throwing
         /// <see cref="ObjectDisposedException"/> on the content stream.
         /// </summary>
