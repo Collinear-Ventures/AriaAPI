@@ -45,17 +45,14 @@ namespace AriaAPI.Security
             // Read active system (Test/Prod) from strongly-typed options
             var system = _factory.GetActiveSystem(out var systemName);
 
-            var scope = string.IsNullOrWhiteSpace(scopeOverride)
-                ? system.Auth.Scope
-                : scopeOverride;
-
+            var scope = ResolveScope(system, scopeOverride);
             if (scope is null)
                 throw new InvalidOperationException($"Missing scope for FHIR system '{systemName}'.");
 
             var scopeNormalized = NormalizeScope(scope);
 
             // Cache key includes system to avoid cross-environment collisions
-            var cacheKey = $"token:{systemName}:{scopeNormalized}";
+            var cacheKey = BuildCacheKey(systemName, scopeNormalized);
             if (_cache.TryGetValue<string>(cacheKey, out var cached) && !string.IsNullOrWhiteSpace(cached))
                 return cached!;
 
@@ -107,17 +104,29 @@ namespace AriaAPI.Security
         {
             var system = _factory.GetActiveSystem(out var systemName);
 
-            var scope = string.IsNullOrWhiteSpace(scopeOverride)
-                ? system.Auth.Scope
-                : scopeOverride;
-
+            var scope = ResolveScope(system, scopeOverride);
             if (scope is null)
                 return;
 
-            var scopeNormalized = NormalizeScope(scope);
-            var cacheKey = $"token:{systemName}:{scopeNormalized}";
-            _cache.Remove(cacheKey);
+            _cache.Remove(BuildCacheKey(systemName, NormalizeScope(scope)));
         }
+
+        /// <summary>
+        /// Resolves the effective scope for a request: <paramref name="scopeOverride"/> when
+        /// supplied, otherwise the active system's configured scope. Shared by
+        /// <see cref="GetTokenAsync"/> and <see cref="InvalidateToken"/> so both always agree on
+        /// which scope a given call targets.
+        /// </summary>
+        private static string? ResolveScope(FhirSystemOptions system, string? scopeOverride) =>
+            string.IsNullOrWhiteSpace(scopeOverride) ? system.Auth.Scope : scopeOverride;
+
+        /// <summary>
+        /// Builds the <see cref="IMemoryCache"/> key for a given system and (already-normalized)
+        /// scope. Shared by <see cref="GetTokenAsync"/> and <see cref="InvalidateToken"/> so a
+        /// future change to the key format cannot leave one of them computing a stale key.
+        /// </summary>
+        private static string BuildCacheKey(string systemName, string normalizedScope) =>
+            $"token:{systemName}:{normalizedScope}";
 
         /// <summary>
         /// Normalizes scope inputs allowing comma or space lists -> single space-delimited string.
