@@ -17,6 +17,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **XML documentation on all public API surface** — every public type and member now has `/// <summary>` XML doc comments; build produces zero missing-doc warnings
 - **Security hardening** — PHI-safe logging via `PhiMask.Mask()` for all identifiers; token error messages scrubbed of secrets; path traversal guard on SQL file reads; recursion depth limit on fan-out search; HTTP connection pool limits on `SocketsHttpHandler`
 
+### Fixed
+- **`BearerTokenHandler` stale-token retry on 401** (PR #8, Issue #7) — `ForceRefreshAsync` now calls `TokenProvider.InvalidateToken(scope)` to evict the corresponding `IMemoryCache` entry, in addition to clearing its own local token/expiry fields. Previously, a 401-triggered refresh could hand back the same already-rejected cached token until that entry's own TTL elapsed, causing a window of repeated 401s. `TokenProvider` gains a public `InvalidateToken(string? scopeOverride = null)` method
+
 ---
 
 ## [2026-04-06] — FanOutSearchHelper comma normalization (PR #3, Issue #2)
