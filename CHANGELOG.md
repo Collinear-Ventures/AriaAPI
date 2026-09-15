@@ -22,6 +22,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.11] — 2026-09-15 — Explicit document-type publisher (Issue #9)
+
+### Added
+- **`DocumentReferenceCreateParams.DocumentTypePublisher`** — opt-in Organization id used as the publisher for the document-type `ValueSet/$expand` (a leading `Organization/` is stripped). ARIA requires a Provider-level Organization there, which is not what callers put in the authenticator slot. When unset, the id from `AuthenticatorReference` is used exactly as in 1.0.10; `AuthenticatorReference` validation is unchanged.
+
+---
+
 ## [2026-04-06] — FanOutSearchHelper comma normalization (PR #3, Issue #2)
 
 ### Added
