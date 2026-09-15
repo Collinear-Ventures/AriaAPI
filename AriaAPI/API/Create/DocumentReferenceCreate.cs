@@ -49,6 +49,13 @@ namespace AriaAPI.API.DocumentReferenceCreate
             /// <summary>FHIR reference to the authenticator, e.g., "Organization/RadOnc-1". Optional.</summary>
             public string? AuthenticatorReference { get; init; }
 
+            /// <summary>
+            /// Organization id used as the publisher when resolving document types via ValueSet
+            /// $expand (e.g. "Organization-Prov-7"); a leading "Organization/" is stripped. When
+            /// unset, the id from <see cref="AuthenticatorReference"/> is used (legacy behavior).
+            /// </summary>
+            public string? DocumentTypePublisher { get; init; }
+
             /// <summary>FHIR reference to the custodian organization (DocumentReference.custodian). Optional.</summary>
             public string? CustodianReference { get; init; }
 
@@ -215,23 +222,14 @@ namespace AriaAPI.API.DocumentReferenceCreate
 
             ct.ThrowIfCancellationRequested();
 
-            if (string.IsNullOrWhiteSpace(p.AuthenticatorReference))
-                throw new ArgumentException(
-                    "AuthenticatorReference is required to resolve document types (e.g., \"Organization/JamesRO\").",
-                    nameof(p));
-
-            var refParts = p.AuthenticatorReference.Split('/');
-            if (refParts.Length < 2 || string.IsNullOrWhiteSpace(refParts[1]))
-                throw new ArgumentException(
-                    $"AuthenticatorReference must be in 'ResourceType/Id' format (e.g., \"Organization/JamesRO\"), got: \"{p.AuthenticatorReference}\".",
-                    nameof(p));
+            var documentTypePublisher = ResolveDocumentTypePublisher(p);
 
             if (!p.Type.HasValue)
                 throw new ArgumentException("Document Type is required.", nameof(p));
 
             var service = await DocumentTypeConceptService.CreateAsync(
                     configurator,
-                    publisher: refParts[1],
+                    publisher: documentTypePublisher,
                     listReturnLimit: 250
                 ).ConfigureAwait(false);
 
@@ -319,6 +317,38 @@ namespace AriaAPI.API.DocumentReferenceCreate
 
             logger.LogInformation("DocumentReference created with id: {Id}", PhiMask.Mask(created?.Id ?? ""));
             return created!;
+        }
+
+        /// <summary>
+        /// Validates <see cref="DocumentReferenceCreateParams.AuthenticatorReference"/> and resolves
+        /// the publisher id to use when resolving document types via ValueSet $expand: the explicit
+        /// <see cref="DocumentReferenceCreateParams.DocumentTypePublisher"/> when set (with a leading
+        /// "Organization/" stripped), otherwise the id portion of AuthenticatorReference (legacy
+        /// behavior).
+        /// </summary>
+        /// <exception cref="ArgumentException">
+        /// Thrown when AuthenticatorReference is missing or not in 'ResourceType/Id' format.
+        /// </exception>
+        internal static string ResolveDocumentTypePublisher(DocumentReferenceCreateParams p)
+        {
+            if (string.IsNullOrWhiteSpace(p.AuthenticatorReference))
+                throw new ArgumentException(
+                    "AuthenticatorReference is required to resolve document types (e.g., \"Organization/JamesRO\").",
+                    nameof(p));
+
+            var refParts = p.AuthenticatorReference.Split('/');
+            if (refParts.Length < 2 || string.IsNullOrWhiteSpace(refParts[1]))
+                throw new ArgumentException(
+                    $"AuthenticatorReference must be in 'ResourceType/Id' format (e.g., \"Organization/JamesRO\"), got: \"{p.AuthenticatorReference}\".",
+                    nameof(p));
+
+            if (string.IsNullOrWhiteSpace(p.DocumentTypePublisher))
+                return refParts[1];
+
+            const string organizationPrefix = "Organization/";
+            return p.DocumentTypePublisher.StartsWith(organizationPrefix, StringComparison.Ordinal)
+                ? p.DocumentTypePublisher.Substring(organizationPrefix.Length)
+                : p.DocumentTypePublisher;
         }
 
         /// <summary>Builds Varian extensions, then assigns them to the resource when any apply.</summary>

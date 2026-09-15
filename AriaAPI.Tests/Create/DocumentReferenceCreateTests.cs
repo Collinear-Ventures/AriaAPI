@@ -200,6 +200,62 @@ namespace AriaAPI.Tests.Create
             }
         }
 
+        // ── DocumentTypePublisher resolution (ResolveDocumentTypePublisher) ────
+
+        [Fact]
+        public void ResolveDocumentTypePublisher_PrefersExplicitPublisher()
+        {
+            var p = new DocumentReferenceCreate.DocumentReferenceCreateParams
+            {
+                AuthenticatorReference = "Organization/Organization-Dept-10002",
+                DocumentTypePublisher = "Organization-Prov-7"
+            };
+
+            var publisher = DocumentReferenceCreate.ResolveDocumentTypePublisher(p);
+
+            Assert.Equal("Organization-Prov-7", publisher);
+        }
+
+        [Fact]
+        public void ResolveDocumentTypePublisher_StripsOrganizationPrefix()
+        {
+            var p = new DocumentReferenceCreate.DocumentReferenceCreateParams
+            {
+                AuthenticatorReference = "Organization/Organization-Dept-10002",
+                DocumentTypePublisher = "Organization/Organization-Prov-7"
+            };
+
+            var publisher = DocumentReferenceCreate.ResolveDocumentTypePublisher(p);
+
+            Assert.Equal("Organization-Prov-7", publisher);
+        }
+
+        [Fact]
+        public void ResolveDocumentTypePublisher_FallsBackToAuthenticatorId()
+        {
+            var p = new DocumentReferenceCreate.DocumentReferenceCreateParams
+            {
+                AuthenticatorReference = "Organization/JamesRO"
+            };
+
+            var publisher = DocumentReferenceCreate.ResolveDocumentTypePublisher(p);
+
+            Assert.Equal("JamesRO", publisher);
+        }
+
+        [Fact]
+        public void ResolveDocumentTypePublisher_ExplicitPublisher_StillRequiresAuthenticator()
+        {
+            var p = new DocumentReferenceCreate.DocumentReferenceCreateParams
+            {
+                AuthenticatorReference = string.Empty,
+                DocumentTypePublisher = "Organization-Prov-7"
+            };
+
+            Assert.Throws<ArgumentException>(() =>
+                DocumentReferenceCreate.ResolveDocumentTypePublisher(p));
+        }
+
         // ── Varian extension flags (BuildVarianExtensions) ─────────────────────
 
         private const string SupervisorExtensionUrl =
